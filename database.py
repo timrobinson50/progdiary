@@ -13,7 +13,7 @@ CREATE_MOVIES_TABLE = """
 CREATE_USERS_TABLE = """
     --sql
     CREATE TABLE IF NOT EXISTS users (
-    username TEXT PRIMARY KEY,
+    username TEXT PRIMARY KEY
     );
 """
 
@@ -31,6 +31,12 @@ INSERT_MOVIES = """
     --sql
     INSERT INTO movies (title, release_timestamp) VALUES (?, ?);
 """
+
+INSERT_USER = """
+    --sql
+    INSERT INTO users (username) VALUES (?);
+"""
+
 DELETE_MOVIE = """
     --sql
     DELETE FROM movies where title = ?;
@@ -45,11 +51,15 @@ SELECT_UPCOMING_MOVIES = """
 """
 SELECT_WATCHED_MOVIES = """
     --sql
-    SELECT * FROM watched WHERE watcher_name = ?;
+    SELECT movies.* 
+    FROM movies
+    JOIN watched ON movies.id = watched.movie_id
+    JOIN users ON users.username = watched.user_username
+    WHERE users.username = ?;
 """
 INSERT_WATCHED_MOVIE = """
     --sql
-    INSERT INTO watched (watcher_name, title) VALUES (?, ?);
+    INSERT INTO watched (user_username, movie_id) VALUES (?, ?);
     """
 SET_MOVIE_WATCHED = """
     --sql
@@ -62,12 +72,18 @@ connection = sqlite3.connect("data.db")
 def create_table():
     with connection:
         connection.execute(CREATE_MOVIES_TABLE)
+        connection.execute(CREATE_USERS_TABLE)
         connection.execute(CREATE_WATCHED_TABLE)
 
+def add_user(username):
+    with connection:
+        connection.execute(
+            INSERT_USER, (username,))
+            
 def add_movie(title, release_timestamp):
     with connection:
         connection.execute(
-            INSERT_MOVIES, (title, release_timestamp))
+            INSERT_MOVIES, (title, release_timestamp,))
 
 def get_movies(upcoming=False):
     with connection:
@@ -79,10 +95,9 @@ def get_movies(upcoming=False):
             cursor.execute(SELECT_ALL_MOVIES)
     return cursor.fetchall()
 
-def watch_movie(username, title):
+def watch_movie(username, movie_id):
     with connection:
-        connection.execute(DELETE_MOVIE, (title,))
-        connection.execute(INSERT_WATCHED_MOVIE, (username, title,))
+        connection.execute(INSERT_WATCHED_MOVIE, (username, movie_id,))
 
 def get_watched_movie(username):
     with connection:
